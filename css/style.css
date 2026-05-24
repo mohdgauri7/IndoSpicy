@@ -1303,3 +1303,55 @@ background:
   color: #8b2a1f;
   font-size: 13px;
 }
+
+.book-btn:disabled,
+.book-btn.is-loading {
+  opacity: .65;
+  cursor: progress;
+  pointer-events: none;
+}
+
+.book-btn.is-loading::after {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-left: 10px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  vertical-align: -2px;
+  animation: indospicy-spin .8s linear infinite;
+}
+
+@keyframes indospicy-spin {
+  to { transform: rotate(360deg); }
+}
+
+.order-id-line {
+  font-size: 13px;
+  color: var(--gray);
+  margin-bottom: 16px !important;
+  letter-spacing: .5px;
+}
+.order-id-line strong {
+  font-family: var(--font-display, monospace);
+  color: var(--black);
+  letter-spacing: 1px;
+}
+
+.whatsapp-btn {
+  display: inline-block;
+  background: #25D366;
+  color: #fff;
+  text-decoration: none;
+  padding: 12px 28px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  margin-right: 8px;
+  margin-bottom: 8px;
+  transition: opacity .2s;
+}
+.whatsapp-btn[hidden] { display: none; }
+.whatsapp-btn:hover { opacity: .85; }

@@ -4,6 +4,13 @@
    add / qty stepper / submit / success popup.
    ============================================ */
 
+// === CONFIG — replace after deploying Apps Script (see apps-script/SETUP.md) ===
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzMzKAKAGudZvIVF4VpOSom6CaCN3bCM07lXuMqj1jt9ic7ZxYmjoiY_8wrOjhmRwyV/exec';
+
+// Optional: restaurant's WhatsApp number for the post-order quick-message link.
+// International format, country code first, NO leading "+" or spaces. Leave '' to hide.
+const WHATSAPP_NUMBER = '';
+
 document.addEventListener('DOMContentLoaded', function () {
 
   const selected = new Map();
@@ -202,8 +209,66 @@ document.addEventListener('DOMContentLoaded', function () {
     renderSummary();
   }
 
+  function setLoading(isLoading) {
+    if (!placeBtn) return;
+    placeBtn.disabled = isLoading;
+    placeBtn.classList.toggle('is-loading', isLoading);
+    placeBtn.textContent = isLoading ? 'PLACING ORDER…' : 'PLACE ORDER';
+  }
+
+  async function submitOrder(payload) {
+    if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
+      throw new Error('Orders endpoint is not configured yet.');
+    }
+
+    // NOTE: Apps Script web apps don't handle CORS preflight. Sending the body
+    // as text/plain keeps the request "simple" and skips the OPTIONS preflight.
+    // The body is still JSON; Apps Script reads e.postData.contents.
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      redirect: 'follow',
+    });
+
+    if (!response.ok) {
+      throw new Error('Server returned ' + response.status);
+    }
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || 'Order could not be saved.');
+    }
+    return result;
+  }
+
+  function buildWhatsAppLink(orderId, payload) {
+    if (!WHATSAPP_NUMBER) return '';
+    const lines = [
+      'Hi Indospicy! I just placed bulk order ' + orderId + '.',
+      'Name: ' + payload.customer.name,
+      'Delivery: ' + payload.delivery.date + ' at ' + payload.delivery.time,
+      'Items: ' + payload.items.map(function (i) { return i.name + ' x' + i.qty; }).join(', '),
+      'Estimated total: RM ' + payload.estimatedTotal,
+    ];
+    return 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(lines.join('\n'));
+  }
+
+  function openSuccessPopup(orderId, payload) {
+    if (!popup) return;
+    const idEl = popup.querySelector('[data-order-id]');
+    if (idEl) idEl.textContent = orderId;
+
+    const waLink = popup.querySelector('#waNotifyLink');
+    if (waLink) {
+      const href = buildWhatsAppLink(orderId, payload);
+      if (href) { waLink.href = href; waLink.hidden = false; }
+      else { waLink.hidden = true; }
+    }
+    popup.classList.add('active');
+  }
+
   if (placeBtn) {
-    placeBtn.addEventListener('click', function () {
+    placeBtn.addEventListener('click', async function () {
       if (errorEl) { errorEl.hidden = true; errorEl.textContent = ''; }
 
       if (selected.size === 0) { showError('Please select at least one dish.'); return; }
@@ -225,10 +290,18 @@ document.addEventListener('DOMContentLoaded', function () {
         notes: form.orderNotes.value.trim(),
         items: items,
         estimatedTotal: items.reduce(function (s, i) { return s + (i.price * i.qty); }, 0),
+        submittedAt: new Date().toISOString(),
       };
 
-      console.log('Bulk order payload (to be sent to backend):', payload);
-      if (popup) popup.classList.add('active');
+      setLoading(true);
+      try {
+        const result = await submitOrder(payload);
+        openSuccessPopup(result.orderId, payload);
+      } catch (err) {
+        showError('Could not place your order: ' + err.message + ' Please try again or call us.');
+      } finally {
+        setLoading(false);
+      }
     });
   }
 

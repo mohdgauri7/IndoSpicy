@@ -1,0 +1,9 @@
+# Local IDE / Claude Code state — never commit
+.claude/
+
+# macOS
+.DS_Store
+
+# Editor state
+.vscode/
+.idea/
