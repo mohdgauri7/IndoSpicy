@@ -25,9 +25,20 @@ document.addEventListener('DOMContentLoaded', function () {
   const closeBtn     = document.querySelector('.btn.cancel');
   const form         = document.getElementById('bulkOrderForm');
   const dateInput    = document.getElementById('orderDate');
+  const timeInput    = document.getElementById('orderTime');
+
+  // Prefill delivery date/time with the current local date and time
+  const now = new Date();
+  const pad = function (n) { return String(n).padStart(2, '0'); };
+  const todayLocal = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+  const nowLocal   = pad(now.getHours()) + ':' + pad(now.getMinutes());
 
   if (dateInput) {
-    dateInput.min = new Date().toISOString().split('T')[0];
+    dateInput.min = todayLocal;
+    if (!dateInput.value) dateInput.value = todayLocal;
+  }
+  if (timeInput && !timeInput.value) {
+    timeInput.value = nowLocal;
   }
 
   // Open native date/time picker on any click inside the field (not just the icon)
